@@ -22,7 +22,7 @@ import os
 import gzip
 from make_ngrams import compute_ngrams
 import xlsxwriter
-from processing_functions import remove_diacritic, load_speakerlist
+from processing_functions import remove_diacritic, load_speakerlist, store_to_pickle, write_to_csv
 
 
 #Seance followed by less than or equal to 4 line breaks (\n) then date value =
@@ -82,12 +82,10 @@ def parseFiles(raw_speeches, multiple_speakers):
 		        		findSpeeches(raw_speeches, multiple_speakers, session, date, volno)
 		        		dates.add(date)
 	        filename.close()
-	pickle_filename = "num_sessions.pickle"
-    with open("num_sessions.pickle", 'wb') as handle:
-    	pickle.dump(num_sessions, handle, protocol = 0)
-    pickle_filename = "num_morethan1_session.pickle"
-    with open("num_morethan1_session.pickle", 'wb') as handle:
-    	pickle.dump(num_morethan1_session, handle, protocol = 0)
+	
+	store_to_pickle(num_sessions, "num_sessions.pickle")
+	store_to_pickle(num_morethan1_session, "num_morethan1_session.pickle")
+
 
 def findSpeeches(raw_speeches, multiple_speakers, daily_soup, date, volno):
 	id_base = date.replace("/","_")
@@ -112,6 +110,9 @@ def findSpeeches(raw_speeches, multiple_speakers, daily_soup, date, volno):
 		except AttributeError:
 			speaker = ""
 
+		while talk.find("note"):
+			ftnotes = talk.note.extract()
+
 		# Piece together full speech if in multiple paragraph tags
 		speech = talk.find_all('p')
 		text = ""
@@ -119,7 +120,6 @@ def findSpeeches(raw_speeches, multiple_speakers, daily_soup, date, volno):
 		for section in speech:
 			text = text + " " + section.get_text()
 		full_speech = remove_diacritic(text).decode('utf-8')
-		full_speech = re.sub(r'<note place="foot">[\w\W]+<\/note>', ' ', full_speech)
 		full_speech = re.sub(r'\([0-9]{1,3}\)[\w\W]{1,100}', ' ', full_speech)
 		full_speech = full_speech.replace("\n"," ").replace("--"," ").replace("!"," ")
 		full_speech = re.sub(r'([ ]{2,})', ' ', full_speech)
@@ -127,6 +127,8 @@ def findSpeeches(raw_speeches, multiple_speakers, daily_soup, date, volno):
 		# Speaker name is set to the full speaker name extracted from the Excel file
 		speaker_name = ""
 
+		#####
+		# THIS IS THE INITIAL ATTEMPT AT SPEAKER DISAMBIGUATION
 		# Only look at speeches not form the president
 		if speaker not in presidents:
 			if speaker in speaker_list.index.values:
@@ -198,74 +200,37 @@ if __name__ == '__main__':
 	parseFiles(raw_speeches, multiple_speakers)
 
 	# Writes data to relevant files
-	txtfile = open("names_not_caught.txt", 'w')
-	for name in sorted(names_not_caught):
-		txtfile.write(name)
-	txtfile.close()
+	# txtfile = open("names_not_caught.txt", 'w')
+	# for name in sorted(names_not_caught):
+	# 	txtfile.write(name)
+	# txtfile.close()
 
-	file = open('speakers_using_find.txt', 'w')
-	for item in sorted(speakers_using_find):
-		file.write(item)
-	file.close()
+	# file = open('speakers_using_find.txt', 'w')
+	# for item in sorted(speakers_using_find):
+	# 	file.write(item)
+	# file.close()
 
 	file = open('speakers.txt', 'w')
 	for item in sorted(speakers):
 		file.write(item + "\n")
 	file.close()
 
-	pickle_filename = "speechid_to_speaker.pickle"
-	with open(pickle_filename, 'wb') as handle:
-		pickle.dump(speechid_to_speaker, handle, protocol = 0)
-	w = csv.writer(open("rspeechid_to_speaker.csv", "w"))
-	for key, val in speechid_to_speaker.items():
-		w.writerow([key,val])
+	store_to_pickle(speechid_to_speaker, "speechid_to_speaker.pickle")
+	store_to_pickle(raw_speeches, "raw_speeches.pickle")
+	store_to_pickle(multiple_speakers, "multiple_speakers.pickle")
 
-	pickle_filename_2 = "raw_speeches.pickle"
-	with open(pickle_filename_2, 'wb') as handle:
-		pickle.dump(raw_speeches, handle, protocol = 0)
-	w = csv.writer(open("raw_speeches.csv", "w"))
-	for key, val in raw_speeches.items():
-		w.writerow([key,val])
+	store_to_pickle(speaker_num_total_speeches, "speaker_num_total_speeches.pickle")
+	store_to_pickle(speaker_num_total_chars, "speaker_num_total_chars.pickle")
+	store_to_pickle(speakers, "speakers.pickle")
+	store_to_pickle(speeches_per_day, "speeches_per_session.pickle")
+	store_to_pickle(speakers_per_session, "speakers_per_session.pickle")
 
-	pickle_filename_3 = "multiple_speakers.pickle"
-	with open(pickle_filename_3, 'wb') as handle:
-		pickle.dump(multiple_speakers, handle, protocol = 0)
-
-	pickle_filename_2 = "speaker_num_total_speeches.pickle"
-	with open(pickle_filename_2, 'wb') as handle:
-		pickle.dump(speaker_num_total_speeches, handle, protocol = 0)
-
-	pickle_filename_2 = "speaker_num_total_chars.pickle"
-	with open(pickle_filename_2, 'wb') as handle:
-		pickle.dump(speaker_num_total_chars, handle, protocol = 0)
-
-	pickle_filename_2 = "speakers.pickle"
-	with open(pickle_filename_2, 'wb') as handle:
-		pickle.dump(speakers, handle, protocol = 0)
-
-	pickle_filename_2 = "speeches_per_session.pickle"
-	with open(pickle_filename_2, 'wb') as handle:
-		pickle.dump(speeches_per_day, handle, protocol = 0)
-
-	pickle_filename = "speakers_per_session.pickle"
-	with open(pickle_filename, 'wb') as handle:
-		pickle.dump(speakers_per_session, handle, protocol = 0)
-
-	w = csv.writer(open("speaker_num_total_speeches.csv", "w"))
-	for key, val in speaker_num_total_speeches.items():
-		w.writerow([key, val])
-
-	w = csv.writer(open("speaker_num_total_chars.csv", "w"))
-	for key, val in speaker_num_total_chars.items():
-		w.writerow([key, val])
-
-	w = csv.writer(open("speeches_per_session.csv", "w"))
-	for key, val in speeches_per_day.items():
-		w.writerow([key, val])
-
-	w = csv.writer(open("multiple_speakers.csv", "w"))
-	for key, val in multiple_speakers.items():
-		w.writerow([key, val])
+	write_to_csv(speechid_to_speaker, "speechid_to_speaker.csv")
+	write_to_csv(raw_speeches, "raw_speeches.csv")
+	write_to_csv(speaker_num_total_speeches, "speaker_num_total_speeches.csv")
+	write_to_csv(speaker_num_total_chars, "speaker_num_total_chars.csv")
+	write_to_csv(speeches_per_day, "speeches_per_day.csv")
+	write_to_csv(multiple_speakers, "multiple_speakers.csv")
 
     
        

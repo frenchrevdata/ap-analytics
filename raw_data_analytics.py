@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding=utf-8 -*-
 
+""" Compute raw analytics on xml files """
+
 from bs4 import BeautifulSoup
 import unicodedata
 import os
@@ -17,18 +19,18 @@ import os
 import gzip
 from make_ngrams import compute_ngrams
 import xlsxwriter
-from processing_functions import remove_diacritic, load_speakerlist
+from processing_functions import remove_diacritic, load_speakerlist, store_to_pickle, write_to_csv
 
 
 if __name__ == '__main__':
     import sys
+
+    # Load relevant files
     speechid_to_speaker = pickle.load(open("speechid_to_speaker.pickle", "rb"))
     speeches_per_session = pickle.load(open("speeches_per_session.pickle", "rb"))
     speakers_per_session = pickle.load(open("speakers_per_session.pickle", "rb"))
-    # num sessions per year
-    # SEE BELOW
 
-    # num total speeches
+    # Mum total speeches
     num_total_speeches = 0
     for session in speeches_per_session:
     	num_total_speeches += speeches_per_session[session]
@@ -36,7 +38,7 @@ if __name__ == '__main__':
     file.write(str(num_total_speeches))
     file.close()
 
-    # average number of speeches per session
+    # Average number of speeches per session
     numerator = 0
     count = len(speeches_per_session)
     for session in speeches_per_session:
@@ -46,29 +48,10 @@ if __name__ == '__main__':
     file.write(str(avg_num_speeches_per_session))
     file.close()
 
-    # average number of speeches per session per year
-    """eighty_nine = []
-    eighty_nine_num = 0
-    ninety = []
-    ninety_num = 0
-    ninety_one = []
-    ninety_one = 0
-    ninety_two = []
-    ninety_two = 0
-    ninety_three = []
-    ninety_four = []
-    ninety_five = []
-
-    if year == "1789":
-    		eighty_nine.append(speeches_per_session[])
-    	elif year == "1790":
-    	elif year == "1791":
-    	elif year == "1792":
-    	elif year == "1793":
-    	elif year == "1794":
-    	else:"""
-
+    # Metrics based on year
     num_speeches_per_year = {}
+
+    # Keeps tracks of the number of sessions per year
     count_sessions = {}
     for session in speeches_per_session:
     	year = session[0:4]
@@ -86,25 +69,12 @@ if __name__ == '__main__':
     for year in num_speeches_per_year:
     	avg_num_speeches_per_session_per_year[year] = num_speeches_per_year[year]/(1.0*count_sessions[year])
 
-    w = csv.writer(open("num_speeches_per_year.csv", "w"))
-    for key, val in num_speeches_per_year.items():
-    	w.writerow([key, val])
+    store_to_pickle(num_speeches_per_year, "num_speeches_per_year.pickle")
+    store_to_pickle(count_sessions, "count_sessions.pickle")
 
-    pickle_filename = "num_speeches_per_year.pickle"
-    with open(pickle_filename, 'wb') as handle:
-    	pickle.dump(num_speeches_per_year, handle, protocol = 0)
-
-    w = csv.writer(open("avg_num_speeches_per_session_per_year.csv", "w"))
-    for key, val in avg_num_speeches_per_session_per_year.items():
-    	w.writerow([key, val])
-
-    w = csv.writer(open("count_sessions.csv", "w"))
-    for key, val in count_sessions.items():
-    	w.writerow([key, val])
-
-    pickle_filename = "count_sessions.pickle"
-    with open(pickle_filename, 'wb') as handle:
-    	pickle.dump(count_sessions, handle, protocol = 0)
+    write_to_csv(num_speeches_per_year, "num_speeches_per_year.csv")
+    write_to_csv(avg_num_speeches_per_session_per_year, "avg_num_speeches_per_session_per_year.csv")
+    write_to_csv(count_sessions, "count_sessions.csv")
     	
 
     # num speakers per year
@@ -121,10 +91,7 @@ if __name__ == '__main__':
     for year in speakers_per_year:
     	num_speakers_per_year[year] = len(speakers_per_year[year])
 
-    w = csv.writer(open("num_speakers_per_year_byspeechid.csv", "w"))
-    for key, val in num_speakers_per_year.items():
-    	w.writerow([key, val])
-
+    # write_to_csv(num_speakers_per_year_byspeechid, "num_speakers_per_year_byspeechid.csv")
 
     # average number of speakers per session per year
     num_speakers_per_session_per_year = {}
@@ -141,21 +108,9 @@ if __name__ == '__main__':
     for year in num_speakers_per_year:
     	avg_num_speakers_per_session_per_year[year] = num_speakers_per_year[year]/(1.0*count_sessions[year])
 
-    w = csv.writer(open("num_speakers_per_session_per_year.csv", "w"))
-    for key, val in num_speakers_per_session_per_year.items():
-    	w.writerow([key, val])
-
-    w = csv.writer(open("num_speakers_per_session.csv", "w"))
-    for key, val in num_speakers_per_session.items():
-    	w.writerow([key, val])
-
-
-    pickle_filename = "num_speakers_per_year.pickle"
-    with open(pickle_filename, 'wb') as handle:
-    	pickle.dump(num_speakers_per_year, handle, protocol = 0)
-
-    w = csv.writer(open("avg_num_speakers_per_session_per_year.csv", "w"))
-    for key, val in avg_num_speakers_per_session_per_year.items():
-    	w.writerow([key, val])
+    write_to_csv(num_speakers_per_session_per_year, "num_speakers_per_session_per_year.csv")
+    write_to_csv(num_speakers_per_session, "num_speakers_per_session.csv")
+    store_to_pickle(num_speakers_per_year, "num_speakers_per_year.pickle")
+    write_to_csv(avg_num_speakers_per_session_per_year, "avg_num_speakers_per_session_per_year.csv")
 
 
